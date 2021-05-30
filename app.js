@@ -61,11 +61,11 @@ const jsonToObjResponse = (jsonResponse) => {
   };
 };
 
-const tweetsUserJsonToObjResponse = (jsonResponse) => {
+const userTweetsJsonToObjResponse = (jsonResponse) => {
   return {
     tweet: jsonResponse.tweet,
-    likes: jsonResponse["COUNT(like_id)"],
-    replies: jsonResponse["COUNT(reply_id)"],
+    likes: jsonResponse["COUNT(DISTINCT like_id)"],
+    replies: jsonResponse["COUNT(DISTINCT reply_id)"],
     dateTime: jsonResponse.date_time,
   };
 };
@@ -363,16 +363,15 @@ app.get("/user/tweets/", authenticator, async (request, response) => {
     let userId = await database.get(getUserIdQuery);
 
     const getTweetsQuery = `
-        SELECT DISTINCT tweet,
-        COUNT(like_id),COUNT(reply_id),date_time
-        FROM tweet INNER JOIN like on 
-        tweet.tweet_id = like.tweet_id INNER JOIN
+        SELECT DISTINCT tweet, COUNT(DISTINCT like_id),COUNT(DISTINCT reply_id),date_time
+        FROM tweet INNER JOIN like
+        ON tweet.tweet_id = like.tweet_id INNER JOIN
         reply ON like.tweet_id = reply.tweet_id
-        WHERE tweet.user_id = ${userId.user_id} 
-        GROUP BY tweet;`;
+        WHERE tweet.user_id = ${userId.user_id}
+        GROUP BY tweet.tweet_id;`;
     const tweetsFound = await database.all(getTweetsQuery);
     response.send(
-      tweetsFound.map((eachObj) => tweetsUserJsonToObjResponse(eachObj))
+      tweetsFound.map((eachObj) => userTweetsJsonToObjResponse(eachObj))
     );
   } catch (error) {
     console.log(`DB Error: ${error.message}`);
