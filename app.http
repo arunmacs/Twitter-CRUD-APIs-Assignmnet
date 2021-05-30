@@ -52,12 +52,18 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZ
 ###
 
 
-GET http://localhost:3001/tweets/3/likes/
+GET http://localhost:3001/tweets/2/likes/
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNjIyMjA5MDY1fQ.aLeG6Z3XAixHdQROMCRdQ3-QJe8JqIy3_jE0PAfdFMg
 ###
 
 
-POST http://localhost:3001/user/tweets/?search_q=hi
+GET http://localhost:3001/tweets/2/replies/
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNjIyMjA5MDY1fQ.aLeG6Z3XAixHdQROMCRdQ3-QJe8JqIy3_jE0PAfdFMg
+
+###
+
+
+POST http://localhost:3001/user/tweets/
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6IkpvZUJpZGVuIiwiaWF0IjoxNjIyMjA5MDY1fQ.aLeG6Z3XAixHdQROMCRdQ3-QJe8JqIy3_jE0PAfdFMg
 

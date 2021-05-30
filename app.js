@@ -70,7 +70,7 @@ const tweetsUserJsonToObjResponse = (jsonResponse) => {
   };
 };
 
-const objToListOfObj = (jsonResponse) => {
+const tweetLikedUsersListOfObj = (jsonResponse) => {
   let namesList = [];
   jsonResponse.map((eachObj) => namesList.push(eachObj.username));
   return namesList;
@@ -262,7 +262,6 @@ app.get("/tweets/:tweetId/", authenticator, async (request, response) => {
   }
 });
 
-//**need to check */
 //API-7: Returns If the user requests a tweet of the user he is following,
 // return the tweet, likes count, replies count and date-time..
 //else If the user requests a tweet other than the users he is following invalid
@@ -295,7 +294,7 @@ app.get("/tweets/:tweetId/likes/", authenticator, async (request, response) => {
       response.status(401);
       response.send("Invalid Request");
     } else {
-      let namesList = objToListOfObj(tweetLikedUsers);
+      let namesList = tweetLikedUsersListOfObj(tweetLikedUsers);
       response.send({ likes: namesList });
     }
   } catch (error) {
@@ -303,6 +302,55 @@ app.get("/tweets/:tweetId/likes/", authenticator, async (request, response) => {
   }
 });
 
+//**need to check */
+//API-8: Returns If the user requests a tweet of a user he is following,
+// the list of replies.else If user requests a tweet other than he following invalid
+
+app.get(
+  "/tweets/:tweetId/replies/",
+  authenticator,
+  async (request, response) => {
+    try {
+      const { tweetId } = request.params;
+      const { username } = request;
+      const getFollowerUserIdQuery = `
+        SELECT * 
+        FROM user 
+        WHERE username = '${username}' ;`;
+      let follower = await database.get(getFollowerUserIdQuery);
+
+      const getTweetRepliesQuery = `
+        SELECT name,reply
+        from (tweet INNER JOIN reply ON
+        tweet.tweet_id = reply.tweet_id)
+        INNER JOIN user ON tweet.user_id = user.user_id
+        WHERE tweet.tweet_id IN
+            (SELECT tweet_id
+            FROM (follower INNER JOIN user ON
+            follower.following_user_id = user.user_id) 
+            AS T1 INNER JOIN tweet ON T1.user_id = tweet.user_id
+            WHERE follower.follower_user_id = ${follower.user_id}
+            AND tweet.tweet_id=${tweetId});`;
+      tweetRepliesUsers = await database.all(getTweetRepliesQuery);
+      //console.log(tweetRepliesUsers);
+      if (tweetRepliesUsers[0] === undefined) {
+        response.status(401);
+        response.send("Invalid Request");
+      } else {
+        response.send({
+          replies: tweetRepliesUsers.map((eachObj) => ({
+            name: eachObj.name,
+            reply: eachObj.reply,
+          })),
+        });
+      }
+    } catch (error) {
+      console.log(`DB Error: ${error.message}`);
+    }
+  }
+);
+
+//**need to check */
 //API-9: Returns a list of all tweets of the user
 
 app.get("/user/tweets/", authenticator, async (request, response) => {
@@ -331,6 +379,7 @@ app.get("/user/tweets/", authenticator, async (request, response) => {
   }
 });
 
+//from here APIs passed
 //API-10: Create a tweet in the tweet table
 
 app.post("/user/tweets/", authenticator, async (request, response) => {
