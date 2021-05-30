@@ -311,7 +311,7 @@ app.delete("/tweets/:tweetId/", authenticator, async (request, response) => {
     const getUserIdQuery = `
         SELECT * 
         FROM user 
-        WHERE username = '${username}' ;`;
+    WHERE username = '${username}' ;`;
     let follower = await database.get(getUserIdQuery);
 
     const searchTweetQuery = `
