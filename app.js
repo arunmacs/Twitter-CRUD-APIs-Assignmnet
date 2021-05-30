@@ -61,6 +61,15 @@ const jsonToObjResponse = (jsonResponse) => {
   };
 };
 
+const tweetsUserJsonToObjResponse = (jsonResponse) => {
+  return {
+    tweet: jsonResponse.tweet,
+    likes: jsonResponse["COUNT(like_id)"],
+    replies: jsonResponse["COUNT(reply_id)"],
+    dateTime: jsonResponse.date_time,
+  };
+};
+
 //API-1: Register User
 app.post("/register/", async (request, response) => {
   try {
@@ -201,7 +210,7 @@ app.get("/user/followers/", authenticator, async (request, response) => {
     console.log(`DB Error: ${error.message}`);
   }
 });
-//**need to check */
+
 //API-6: Returns If the user requests a tweet of the user he is following,
 // return the tweet, likes count, replies count and date-time..
 //else If the user requests a tweet other than the users he is following invalid
@@ -216,23 +225,30 @@ app.get("/tweets/:tweetId/", authenticator, async (request, response) => {
         WHERE username = '${username}' ;`;
     let follower = await database.get(getFollowerUserIdQuery);
     //console.log(follower);
-    const getTweetsLikesQuery = `
-        SELECT tweet,COUNT(like_id),COUNT(reply_id),date_time
-        FROM user natural join tweet
-        natural join like natural join reply
-        inner join follower on following_user_id = user.user_id
-        WHERE follower_user_id = ${follower.user_id}
-            AND tweet_id = ${tweetId} ;`;
-    const tweetStats = await database.get(getTweetsLikesQuery);
-    if (tweetStats.tweet === null) {
+    const getTweetsLikesRepliesQuery = `
+      SELECT tweet,COUNT(DISTINCT like_id),
+        COUNT(DISTINCT reply_id),date_time
+        from (tweet INNER JOIN like ON
+        tweet.tweet_id = like.tweet_id) 
+        AS T INNER JOIN reply ON
+        T.tweet_id = reply.tweet_id
+        WHERE tweet.tweet_id IN
+          (SELECT tweet_id
+          FROM (follower INNER JOIN user ON
+          follower.following_user_id = user.user_id) 
+          AS T1 INNER JOIN tweet ON T1.user_id = tweet.user_id
+          WHERE follower.follower_user_id = ${follower.user_id}
+          AND tweet.tweet_id=${tweetId});`;
+    const tweetsStats = await database.get(getTweetsLikesRepliesQuery);
+    if (tweetsStats.tweet === null) {
       response.status(401);
       response.send("Invalid Request");
     } else {
       response.send({
-        tweet: tweetStats.tweet,
-        likes: tweetStats["COUNT(like_id)"],
-        replies: tweetStats["COUNT(reply_id)"],
-        dateTime: tweetStats.date_time,
+        tweet: tweetsStats.tweet,
+        likes: tweetsStats["COUNT(DISTINCT like_id)"],
+        replies: tweetsStats["COUNT(DISTINCT reply_id)"],
+        dateTime: tweetsStats.date_time,
       });
     }
   } catch (error) {
@@ -240,6 +256,7 @@ app.get("/tweets/:tweetId/", authenticator, async (request, response) => {
   }
 });
 
+//**need to check */
 //API-7: Returns If the user requests a tweet of the user he is following,
 // return the tweet, likes count, replies count and date-time..
 //else If the user requests a tweet other than the users he is following invalid
@@ -272,6 +289,34 @@ app.get("/tweets/:tweetId/likes/", authenticator, async (request, response) => {
       console.log(namesList);
       response.send(namesList);
     }
+  } catch (error) {
+    console.log(`DB Error: ${error.message}`);
+  }
+});
+
+//API-9: Returns a list of all tweets of the user
+
+app.get("/user/tweets/", authenticator, async (request, response) => {
+  try {
+    const { username } = request;
+    const getUserIdQuery = `
+        SELECT * 
+        FROM user 
+        WHERE username = '${username}' ;`;
+    let userId = await database.get(getUserIdQuery);
+
+    const getTweetsQuery = `
+        SELECT DISTINCT tweet,
+        COUNT(like_id),COUNT(reply_id),date_time
+        FROM tweet INNER JOIN like on 
+        tweet.tweet_id = like.tweet_id INNER JOIN
+        reply ON like.tweet_id = reply.tweet_id
+        WHERE tweet.user_id = ${userId.user_id} 
+        GROUP BY tweet;`;
+    const tweetsFound = await database.all(getTweetsQuery);
+    response.send(
+      tweetsFound.map((eachObj) => tweetsUserJsonToObjResponse(eachObj))
+    );
   } catch (error) {
     console.log(`DB Error: ${error.message}`);
   }
