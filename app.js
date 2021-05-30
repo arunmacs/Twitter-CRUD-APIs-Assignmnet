@@ -320,12 +320,12 @@ app.get(
       let follower = await database.get(getFollowerUserIdQuery);
 
       const getTweetRepliesQuery = `
-        SELECT name,reply
-        from (tweet INNER JOIN reply ON
-        tweet.tweet_id = reply.tweet_id)
-        INNER JOIN user ON tweet.user_id = user.user_id
+        SELECT DISTINCT name,reply
+        from tweet INNER JOIN reply
+        ON tweet.tweet_id = reply.tweet_id INNER JOIN 
+        user ON reply.user_id = user.user_id
         WHERE tweet.tweet_id IN
-            (SELECT tweet_id
+            (SELECT DISTINCT tweet_id
             FROM (follower INNER JOIN user ON
             follower.following_user_id = user.user_id) 
             AS T1 INNER JOIN tweet ON T1.user_id = tweet.user_id
@@ -350,7 +350,6 @@ app.get(
   }
 );
 
-//**need to check */
 //API-9: Returns a list of all tweets of the user
 
 app.get("/user/tweets/", authenticator, async (request, response) => {
