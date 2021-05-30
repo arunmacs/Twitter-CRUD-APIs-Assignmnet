@@ -70,6 +70,12 @@ const tweetsUserJsonToObjResponse = (jsonResponse) => {
   };
 };
 
+const objToListOfObj = (jsonResponse) => {
+  let namesList = [];
+  jsonResponse.map((eachObj) => namesList.push(eachObj.username));
+  return namesList;
+};
+
 //API-1: Register User
 app.post("/register/", async (request, response) => {
   try {
@@ -270,24 +276,27 @@ app.get("/tweets/:tweetId/likes/", authenticator, async (request, response) => {
         FROM user 
         WHERE username = '${username}' ;`;
     let follower = await database.get(getFollowerUserIdQuery);
-    //console.log(follower);
+
     const getTweetLikedUserQuery = `
         SELECT username
-        FROM user natural join tweet
-        natural join like natural join reply
-        inner join follower on following_user_id = user.user_id
-        WHERE follower_user_id = ${follower.user_id};`;
-    const tweetStats = await database.all(getTweetLikedUserQuery);
-    //response.send(tweetStats.username);
-    if (tweetStats === undefined) {
+        from (tweet INNER JOIN like ON
+        tweet.tweet_id = like.tweet_id)
+        INNER JOIN user ON like.user_id = user.user_id
+        WHERE tweet.tweet_id IN
+            (SELECT tweet_id
+            FROM (follower INNER JOIN user ON
+            follower.following_user_id = user.user_id) 
+            AS T1 INNER JOIN tweet ON T1.user_id = tweet.user_id
+            WHERE follower.follower_user_id = ${follower.user_id}
+            AND tweet.tweet_id=${tweetId});`;
+    tweetLikedUsers = await database.all(getTweetLikedUserQuery);
+    //console.log(tweetLikedUsers[0] === undefined);
+    if (tweetLikedUsers[0] === undefined) {
       response.status(401);
       response.send("Invalid Request");
     } else {
-      let namesList = tweetStats.filter(
-        (eachObj) => eachObj.username !== undefined
-      );
-      console.log(namesList);
-      response.send(namesList);
+      let namesList = objToListOfObj(tweetLikedUsers);
+      response.send({ likes: namesList });
     }
   } catch (error) {
     console.log(`DB Error: ${error.message}`);
