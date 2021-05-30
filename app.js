@@ -13,6 +13,7 @@ const jwt = require("jsonwebtoken");
 
 let database = null;
 
+//initializing Database and Server
 const initializeDBServer = async () => {
   try {
     database = await open({
@@ -30,7 +31,7 @@ const initializeDBServer = async () => {
 
 initializeDBServer();
 
-//Authenticator
+// Every request will validates user login via Authenticator middleware
 const authenticator = async (request, response, next) => {
   let jwtToken;
   const authHeader = request.headers.authorization;
@@ -53,6 +54,7 @@ const authenticator = async (request, response, next) => {
   }
 };
 
+//converts jsonResponse to Object
 const jsonToObjResponse = (jsonResponse) => {
   return {
     username: jsonResponse.username,
@@ -61,6 +63,7 @@ const jsonToObjResponse = (jsonResponse) => {
   };
 };
 
+//converts jsonResponse to Object
 const userTweetsJsonToObjResponse = (jsonResponse) => {
   return {
     tweet: jsonResponse.tweet,
@@ -70,13 +73,14 @@ const userTweetsJsonToObjResponse = (jsonResponse) => {
   };
 };
 
+//converts jsonResponse to Object
 const tweetLikedUsersListOfObj = (jsonResponse) => {
   let namesList = [];
   jsonResponse.map((eachObj) => namesList.push(eachObj.username));
   return namesList;
 };
 
-//API-1: Register User
+//API-1: Registers new user after validates no existence found in db
 app.post("/register/", async (request, response) => {
   try {
     const { username, name, password, gender } = request.body;
@@ -113,7 +117,7 @@ app.post("/register/", async (request, response) => {
   }
 });
 
-//API-2: Login User
+//API-2: Login User validates password & Generates JWToken & reverts to client
 
 app.post("/login/", async (request, response) => {
   const { username, password } = request.body;
@@ -302,7 +306,6 @@ app.get("/tweets/:tweetId/likes/", authenticator, async (request, response) => {
   }
 });
 
-//**need to check */
 //API-8: Returns If the user requests a tweet of a user he is following,
 // the list of replies.else If user requests a tweet other than he following invalid
 
@@ -377,7 +380,6 @@ app.get("/user/tweets/", authenticator, async (request, response) => {
   }
 });
 
-//from here APIs passed
 //API-10: Create a tweet in the tweet table
 
 app.post("/user/tweets/", authenticator, async (request, response) => {
@@ -438,4 +440,5 @@ app.delete("/tweets/:tweetId/", authenticator, async (request, response) => {
   }
 });
 
+//exporting express instance
 module.exports = app;
